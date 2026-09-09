@@ -19,14 +19,28 @@ export default defineNuxtConfig({
   alias: { '@': fileURLToPath(new URL('./app', import.meta.url)) },
 
   runtimeConfig: {
-    /* Server-only. Empty means «store requests in this project's own file». */
+    /*
+      ── Server-only, both of them ─────────────────────────────────────────
+
+      `public` is not a security level, it is a delivery mechanism: everything
+      under it is serialised into the HTML and reaches every visitor. Measured
+      on this build — `plansUrl` sat under `public` and the application's own
+      hostname was sitting in the page source of the marketing site, for anyone
+      who pressed «view source».
+
+      Neither of these is read in the browser: `server/api/plans.get.ts` and
+      `server/api/demo.post.ts` both run on the server. So neither belongs in
+      `public`, and now the URL of the product is not published by the page
+      advertising it.
+    */
+    plansUrl: '',
     demoForwardUrl: '',
     public: {
+      /* These three ARE public — they are printed in the footer for people to
+         call. Nothing is exposed that the page does not already display. */
       contactPhone: '',
       contactWhatsapp: '',
       contactEmail: '',
-      /* Empty means «use config/plans.ts». See the note there. */
-      plansUrl: '',
     },
   },
 

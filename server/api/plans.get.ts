@@ -12,7 +12,7 @@ import { FALLBACK_PLANS } from '~~/config/plans'
  * one showing the committed defaults.
  */
 export default defineEventHandler(async (event) => {
-  const url = useRuntimeConfig(event).public.plansUrl
+  const url = useRuntimeConfig(event).plansUrl
   const locale = getCookie(event, 'toothpath_locale') === 'en' ? 'en' : 'ar'
 
   if (url) {

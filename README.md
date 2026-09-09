@@ -45,9 +45,15 @@ pnpm build && node .output/server/index.mjs
 
 | المتغيّر | شنو يسوّي |
 |---|---|
-| `NUXT_PUBLIC_CONTACT_*` | الهاتف والواتساب والبريد بالتذييل |
-| `NUXT_PUBLIC_PLANS_URL` | رابط `/api/public/plans` بالتطبيق الحيّ. **ضعه بالإنتاج** — بدونه تُقرأ الأسعار من `config/plans.ts`، ويصير للسعر بيتان |
-| `NUXT_DEMO_FORWARD_URL` | يمرّر كل طلب للتطبيق الحيّ بدل تخزينه هنا |
+| `NUXT_PUBLIC_CONTACT_*` | الهاتف والواتساب والبريد بالتذييل. **عامّة** — يشوفها الزائر، وهذا مقصود لأنها مطبوعة بالصفحة أصلاً |
+| `NUXT_PLANS_URL` | رابط `/api/public/plans` بالتطبيق الحيّ. **ضعه بالإنتاج** — بدونه تُقرأ الأسعار من `config/plans.ts`، ويصير للسعر بيتان |
+| `NUXT_DEMO_FORWARD_URL` | يمرّر كل طلب للتطبيق الحيّ بدل تخزينه هنا. **خادمي** |
+
+### ليش `PUBLIC_` مو مستوى أمان
+
+كل ما تحت `runtimeConfig.public` **ينكتب داخل الـHTML** ويوصل كل زائر. لذا `NUXT_PLANS_URL` و`NUXT_DEMO_FORWARD_URL` **بلا** بادئة `PUBLIC_`: هما عنوان تطبيقك، وما ينقرآن إلا بالخادم.
+
+*(قيست هذا فعلاً: لمّا كان `plansUrl` تحت `public`، عنوان التطبيق كان ظاهرًا بمصدر صفحة الموقع.)*
 
 ## طلبات العرض
 
@@ -68,4 +74,4 @@ pnpm build && node .output/server/index.mjs
 - **اسم مرحلة** → `shared/stages.ts`
 - **فئة عمر مستحقّات** → `shared/ageing.ts`
 - **قاعدة الهاتف** → `shared/validation.ts`
-- **سعر** → لا شي، إذا `NUXT_PUBLIC_PLANS_URL` مضبوط. وإلا `config/plans.ts`
+- **سعر** → لا شي، إذا `NUXT_PLANS_URL` مضبوط. وإلا `config/plans.ts`
