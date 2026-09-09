@@ -1,0 +1,12 @@
+node_modules
+.nuxt
+.output
+dist
+.env
+*.log
+.DS_Store
+
+# The demo-request store. It holds real people's phone numbers — it must never
+# reach the repository.
+# The demo-request store — real phone numbers, never committed.
+data/

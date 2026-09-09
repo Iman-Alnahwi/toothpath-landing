@@ -1,0 +1,103 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+  The design tokens the marketing site uses — a subset of the application's.
+
+  The app's stylesheet defines every state colour for every screen (design,
+  transit, ready, waiting, late, urgent, doubtful …). This page draws four
+  illustrations, so it carries the thirteen tokens those need plus the shadcn
+  base. Nothing is invented: every value is copied from the app, so the site
+  and the product are the same green.
+*/
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Pinned to light: a dark OS otherwise renders native controls dark on our
+     white surfaces. */
+  color-scheme: light;
+
+  --radius: 0.65rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.21 0.01 150);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.01 150);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.01 150);
+
+  /* #159847 — straight from the logo, so the UI and the mark match. */
+  --brand-green: #159847;
+  --brand-green-dark: #0F7536;
+  --brand-green-tint: #E3F4EA;
+  --brand-green-soft: #A6D5B9;
+  --brand-blue: #246EAF;
+  --brand-blue-tint: #E6EFF7;
+
+  --primary: var(--brand-green);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.968 0.003 150);
+  --secondary-foreground: oklch(0.21 0.01 150);
+  --muted: oklch(0.968 0.003 150);
+  --muted-foreground: oklch(0.52 0.01 150);
+  --accent: oklch(0.968 0.003 150);
+  --accent-foreground: oklch(0.21 0.01 150);
+  --destructive: #B42318;
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0.004 150);
+  --input: oklch(0.92 0.004 150);
+  --ring: var(--brand-green-soft);
+
+  /* State tints, copied from the app so a red here means what red means there. */
+  --state-late-bg: #B42318;
+  --state-late-wash: #FEF3F2;
+  --state-late-wash-hover: #FEE4E2;
+  --state-ready-bg: #D1FADF;
+  --state-ready-ink: #05603A;
+  --state-urgent-bg: #FEE4E2;
+  --state-urgent-ink: #912018;
+  --state-waiting-bg: #FFFBEB;
+  --state-waiting-ink: #B45309;
+  --state-waiting-line: #FDE68A;
+  --state-waiting-accent: #FBBF24;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'IBM Plex Sans Arabic', Cairo, Tajawal, system-ui, sans-serif;
+  }
+  /* Every figure in this product is a Western digit, in both languages. */
+  :lang(ar) { font-variant-numeric: lining-nums; }
+}
+
+/* A person's own words — never re-ordered by the page's direction. */
+.user-text { unicode-bidi: plaintext; }
