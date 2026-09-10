@@ -21,15 +21,26 @@ import {
  *     escaped.
  *
  * ── Where the row goes ────────────────────────────────────────────────────
- * If `NUXT_DEMO_FORWARD_URL` is set it is forwarded to the live application and
- * nothing is written here. Otherwise it is appended to `data/requests.jsonl`,
- * which `.gitignore` excludes — those lines are real people's phone numbers and
- * must never reach the repository.
+ * Three destinations, first one configured wins:
+ *
+ *   1. `NUXT_DEMO_FORWARD_URL` — the live application's own endpoint.
+ *   2. `NUXT_RESEND_API_KEY` — the request is emailed to `NUXT_NOTIFY_EMAIL`.
+ *   3. `data/requests.jsonl` — a file, which is the local-development case.
+ *
+ * The file is last because it is the one that cannot survive deployment: a
+ * serverless filesystem is read-only and the instance is discarded after the
+ * request. It stays as the default so `pnpm dev` works with no configuration
+ * at all, and so a lead typed on a laptop is still readable with `cat`.
  *
  * A file and not SQLite, deliberately: a landing page collects a handful of
  * leads, and a native dependency is a build step every person who clones this
- * repo has to get working before the site will start. One line of JSON per
- * request is readable with `cat`, and there is nothing to migrate.
+ * repo has to get working before the site will start.
+ *
+ * ── When delivery fails ───────────────────────────────────────────────────
+ * The visitor is told, and told to phone instead. Returning `{ ok: true }` on
+ * a lead we did not keep is the failure that costs a customer: they believe
+ * they have been in touch, and wait for a call that was never queued. The row
+ * is also written to the host's log, which is the last copy that exists.
  */
 
 const recent = new Map<string, number[]>()
@@ -54,6 +65,71 @@ function save(row: Record<string, unknown>) {
 }
 
 const clip = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max)
+
+type Row = {
+  at: string
+  labName: string
+  phone: string
+  city: string | null
+  note: string | null
+}
+
+/* Baghdad, spelled out. A bare ISO string in a notification is a small tax on
+   every single read — the lab owner should not be converting from UTC to know
+   whether this arrived during working hours. */
+function whenReadable(iso: string): string {
+  return new Intl.DateTimeFormat('ar-IQ', {
+    timeZone: 'Asia/Baghdad',
+    dateStyle: 'full',
+    timeStyle: 'short',
+    numberingSystem: 'latn',
+  }).format(new Date(iso))
+}
+
+async function email(cfg: ReturnType<typeof useRuntimeConfig>, row: Row) {
+  const to = cfg.notifyEmail || cfg.public.contactEmail
+  if (!to) throw new Error('no recipient configured')
+
+  /* The phone in the subject, not only the body: a notification read on a
+     locked phone screen should already carry the one thing you act on. */
+  const subject = `طلب تجربة — ${row.labName} — ${row.phone}`
+  const lines = [
+    ['المعمل', row.labName],
+    ['الهاتف', row.phone],
+    ['المدينة', row.city ?? '—'],
+    ['الملاحظة', row.note ?? '—'],
+    ['وصل', whenReadable(row.at)],
+  ]
+
+  await $fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${cfg.resendApiKey}` },
+    body: {
+      from: cfg.mailFrom,
+      to: [to],
+      subject,
+      /* `dir="rtl"` on the wrapper, because a mail client renders this HTML
+         with its own defaults and ours are not among them. */
+      html: `<div dir="rtl" style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.9">
+  <h2 style="margin:0 0 12px">طلب نسخة تجريبية</h2>
+  <table cellpadding="6" style="border-collapse:collapse">
+    ${lines.map(([k, v]) => `<tr><td style="color:#666">${k}</td><td><b>${escapeHtml(String(v))}</b></td></tr>`).join('')}
+  </table>
+  <p style="margin-top:16px"><a href="https://wa.me/${row.phone.replace(/\D/g, '')}">فتح محادثة واتساب</a></p>
+</div>`,
+      text: lines.map(([k, v]) => `${k}: ${v}`).join('\n'),
+    },
+  })
+}
+
+/* The values are typed by a stranger and land inside an HTML mail. Escaped at
+   the point of interpolation rather than at the point of input, so a change to
+   the form's validation cannot quietly remove the escaping. */
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]!
+  ))
+}
 
 export default defineEventHandler(async (event) => {
   const cfg = useRuntimeConfig(event)
@@ -84,21 +160,38 @@ export default defineEventHandler(async (event) => {
   /* Stored in the one shape that is searchable and dialable. */
   const tidy = isValidPhone(phone) ? normalisePhone(phone) : phone
 
-  if (cfg.demoForwardUrl) {
-    await $fetch(cfg.demoForwardUrl, {
-      method: 'POST',
-      body: { labName, phone: tidy, city: city || null, note: note || null },
-    })
-    return { ok: true }
-  }
-
-  save({
+  const row: Row = {
     at: new Date().toISOString(),
     labName,
     phone: tidy,
     city: city || null,
     note: note || null,
-  })
+  }
+
+  try {
+    if (cfg.demoForwardUrl) {
+      await $fetch(cfg.demoForwardUrl, { method: 'POST', body: row })
+    }
+    else if (cfg.resendApiKey) {
+      await email(cfg, row)
+    }
+    else {
+      save(row)
+    }
+  }
+  catch (err) {
+    /* Last copy. The host keeps its logs even when the mail provider is down
+       and the disk is read-only, so a lead is recoverable by hand rather than
+       gone. */
+    console.error('[demo] delivery failed — request follows', JSON.stringify(row), err)
+
+    throw createError({
+      statusCode: 502,
+      statusMessage: locale === 'en'
+        ? 'We could not record your request. Please call or message us instead — the number is at the bottom of the page.'
+        : 'ما كدرنا نسجّل طلبك. اتصل بينا أو راسلنا واتساب — الرقم بأسفل الصفحة.',
+    })
+  }
 
   return { ok: true }
 })

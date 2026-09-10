@@ -35,6 +35,20 @@ export default defineNuxtConfig({
     */
     plansUrl: '',
     demoForwardUrl: '',
+
+    /*
+      Where a demo request goes when there is no application to forward it to.
+
+      `data/requests.jsonl` — the fallback below — is a real file on a real
+      disk, and that is exactly what a serverless host does not have: the
+      filesystem is read-only and the instance is discarded after the request.
+      Deployed with neither of these set, every lead is accepted with `ok: true`
+      and then thrown away, which is the worst of the three outcomes because
+      nothing looks broken.
+    */
+    resendApiKey: '',
+    notifyEmail: '',
+    mailFrom: 'ToothPath <onboarding@resend.dev>',
     public: {
       /* These three ARE public — they are printed in the footer for people to
          call. Nothing is exposed that the page does not already display. */

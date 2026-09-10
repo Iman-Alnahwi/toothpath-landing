@@ -962,7 +962,7 @@ const FAQ = [
             <h3 class="font-bold">{{ p.name }}</h3>
             <p class="mt-3 text-[1.9rem] font-black leading-none">
               <bdi dir="ltr">{{ money(p.price) }}</bdi>
-              <span class="text-[0.72rem] font-semibold text-muted-foreground">&nbsp;{{ t('unit.currency') }}</span>
+              <span class="text-[0.72rem] font-semibold text-muted-foreground">&nbsp;{{ t('د.ع') }}</span>
             </p>
             <p class="mt-1.5 text-[0.8rem] text-muted-foreground">/ {{ planPeriod(p.durationDays) }}</p>
             <Button variant="outline" class="mt-5 w-full" @click="toForm">{{ t('اطلب عرضًا') }}</Button>
@@ -1072,7 +1072,7 @@ const FAQ = [
                          outline-none focus-visible:border-ring focus-visible:ring-[3px]
                          focus-visible:ring-ring/50"
                 >
-                  <option value="">{{ t('field.pickCity') }}</option>
+                  <option value="">{{ t('اختر مدينتك') }}</option>
                   <option v-for="c in cityOptions(locale)" :key="c.value" :value="c.value">
                     {{ c.label }}
                   </option>
