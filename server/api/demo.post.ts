@@ -122,6 +122,39 @@ async function email(cfg: ReturnType<typeof useRuntimeConfig>, row: Row) {
   })
 }
 
+async function telegram(cfg: ReturnType<typeof useRuntimeConfig>, row: Row) {
+  const lines = [
+    ['المعمل', row.labName],
+    ['الهاتف', row.phone],
+    ['المدينة', row.city ?? '—'],
+    ['الملاحظة', row.note ?? '—'],
+    ['وصل', whenReadable(row.at)],
+  ]
+
+  await $fetch(`https://api.telegram.org/bot${cfg.telegramBotToken}/sendMessage`, {
+    method: 'POST',
+    body: {
+      chat_id: cfg.telegramChatId,
+      parse_mode: 'HTML',
+      /* The lab's own text is escaped — Telegram rejects the whole message on
+         a stray `<`, so an unescaped apostrophe in a lab name would not garble
+         the notification, it would lose the lead entirely. */
+      text: [
+        '<b>طلب نسخة تجريبية</b>',
+        '',
+        ...lines.map(([k, v]) => `${k}: <b>${escapeHtml(String(v))}</b>`),
+      ].join('\n'),
+      /* One tap to the conversation, from a notification. */
+      reply_markup: {
+        inline_keyboard: [[{
+          text: 'فتح واتساب',
+          url: `https://wa.me/${row.phone.replace(/\D/g, '')}`,
+        }]],
+      },
+    },
+  })
+}
+
 /* The values are typed by a stranger and land inside an HTML mail. Escaped at
    the point of interpolation rather than at the point of input, so a change to
    the form's validation cannot quietly remove the escaping. */
@@ -168,28 +201,36 @@ export default defineEventHandler(async (event) => {
     note: note || null,
   }
 
-  try {
-    if (cfg.demoForwardUrl) {
-      await $fetch(cfg.demoForwardUrl, { method: 'POST', body: row })
+  /* Every configured channel, not the first one that happens to be set.
+     Telegram and email are not alternatives — one is a phone notification and
+     the other is a record you can search a year later, and a lead is cheap to
+     send twice and expensive to lose once. */
+  const channels: Array<[string, () => Promise<unknown>]> = []
+  if (cfg.demoForwardUrl) channels.push(['forward', () => $fetch(cfg.demoForwardUrl, { method: 'POST', body: row })])
+  if (cfg.telegramBotToken && cfg.telegramChatId) channels.push(['telegram', () => telegram(cfg, row)])
+  if (cfg.resendApiKey) channels.push(['email', () => email(cfg, row)])
+  /* Only when nothing else is configured — see the note above about disks. */
+  if (!channels.length) channels.push(['file', async () => save(row)])
+
+  const results = await Promise.allSettled(channels.map(([, send]) => send()))
+
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      console.error(`[demo] ${channels[i]![0]} failed`, r.reason)
     }
-    else if (cfg.resendApiKey) {
-      await email(cfg, row)
-    }
-    else {
-      save(row)
-    }
-  }
-  catch (err) {
-    /* Last copy. The host keeps its logs even when the mail provider is down
-       and the disk is read-only, so a lead is recoverable by hand rather than
-       gone. */
-    console.error('[demo] delivery failed — request follows', JSON.stringify(row), err)
+  })
+
+  /* One success is enough: the lead is kept. Failing the visitor because the
+     second channel was down would ask them to send it again, which would
+     deliver a duplicate through the channel that worked. */
+  if (!results.some(r => r.status === 'fulfilled')) {
+    console.error('[demo] every channel failed — request follows', JSON.stringify(row))
 
     throw createError({
       statusCode: 502,
       statusMessage: locale === 'en'
-        ? 'We could not record your request. Please call or message us instead — the number is at the bottom of the page.'
-        : 'ما كدرنا نسجّل طلبك. اتصل بينا أو راسلنا واتساب — الرقم بأسفل الصفحة.',
+        ? 'We could not record your request. Please contact us directly — our details are at the bottom of the page.'
+        : 'ما كدرنا نسجّل طلبك. تواصل ويانا مباشرة — معلومات التواصل بأسفل الصفحة.',
     })
   }
 

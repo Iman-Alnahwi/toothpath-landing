@@ -1143,14 +1143,19 @@ const FAQ = [
           <div>
             <p class="mb-3 text-[0.75rem] font-bold tracking-wide text-muted-foreground">{{ t('تواصل معنا') }}</p>
             <ul class="space-y-2 text-[0.86rem]">
-              <!-- One `tel:` and one `mailto:`, both from the CONTACT constant
-                   at the top of this file. -->
-              <li>
+              <!-- `v-if`, because a channel that is not configured must not be
+                   offered. An empty `tel:` renders as a blank line the eye
+                   reads as a broken page, and `wa.me/` with no number opens
+                   WhatsApp's own error — worse than not showing the link, since
+                   the visitor blames the product for it. Deploy with the phone
+                   unset and the footer is simply email-only; fill it in later
+                   and both lines appear on their own. -->
+              <li v-if="CONTACT.phone">
                 <a :href="`tel:${CONTACT.phone}`" class="hover:text-primary hover:underline" dir="ltr">
                   {{ CONTACT.phone }}
                 </a>
               </li>
-              <li>
+              <li v-if="CONTACT.whatsapp">
                 <a :href="waLink" target="_blank" rel="noopener" class="hover:text-primary hover:underline">
                   {{ t('واتساب') }}
                 </a>

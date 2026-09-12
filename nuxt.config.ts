@@ -49,6 +49,13 @@ export default defineNuxtConfig({
     resendApiKey: '',
     notifyEmail: '',
     mailFrom: 'ToothPath <onboarding@resend.dev>',
+
+    /* Telegram, which beats email on the two things that matter for a lead:
+       it arrives as a phone notification rather than in a mailbox nobody has
+       open, and it has no spam folder to be filed into. Configure both and a
+       request is sent to both — they are not alternatives. */
+    telegramBotToken: '',
+    telegramChatId: '',
     public: {
       /* These three ARE public — they are printed in the footer for people to
          call. Nothing is exposed that the page does not already display. */
